@@ -26,6 +26,8 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
+    compile("com.google.guava:guava:19.0")
+    compile("org.springframework.boot:spring-boot-starter-data-mongodb")
     compile("org.springframework.boot:spring-boot-starter-thymeleaf")
     compile("org.springframework.social:spring-social-facebook")
     compile("org.json:json:20160212")
