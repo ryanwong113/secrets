@@ -1,4 +1,4 @@
-package secrets;
+package secrets.service;
 
 import java.net.UnknownHostException;
 import java.util.List;
