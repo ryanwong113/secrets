@@ -9,3 +9,5 @@ work/
 .idea
 application.properties
 *.iml
+*.ipr
+*.iws

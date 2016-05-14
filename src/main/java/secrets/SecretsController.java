@@ -4,7 +4,10 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 
+import org.apache.log4j.Logger;
+import org.json.JSONObject;
 import org.springframework.core.env.Environment;
 import org.springframework.social.connect.Connection;
 import org.springframework.social.connect.ConnectionRepository;
@@ -12,7 +15,6 @@ import org.springframework.social.facebook.api.Facebook;
 import org.springframework.social.facebook.api.Group;
 import org.springframework.social.facebook.api.GroupMembership;
 import org.springframework.social.facebook.api.PagedList;
-import org.springframework.social.facebook.api.Post;
 import org.springframework.social.facebook.api.User;
 import org.springframework.social.facebook.api.impl.FacebookTemplate;
 import org.springframework.stereotype.Controller;
@@ -20,6 +22,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.inject.Inject;
@@ -27,6 +30,8 @@ import javax.inject.Inject;
 @Controller
 @RequestMapping("/secrets")
 public class SecretsController {
+
+    private static final Logger logger = Logger.getLogger(SecretsController.class);
 
     private Environment environment;
     private Facebook facebook;
@@ -40,28 +45,28 @@ public class SecretsController {
     }
 
     @RequestMapping(value = "login", method = RequestMethod.GET)
-    public String login(Model model) {
-        String accessToken = "EAACEdEose0cBALBF4v9tBTPbJLSIPQnNzIBpuDooeFHPxZAGzqushxEOyRZAvHZCzIOT9phDhnmruJbulb01P6GncmfuO0gEWZBYTIMZB5OaX4bbP1TK2yKpX6GZCpCZBZAvJ1J8TiBJ8B7m5monM0MxfTzLpXcFK8lWFwu1daE9ZBIs4n78l3sbn2yrJJhZANPoy6vlnrCZBBQqQZDZD";
+    public String login(@RequestParam("code") String code, Model model) {
+        logger.info("[login] Logging in...");
 
-        String longAccessToken = getLongAccessToken(accessToken);
+        String longAccessToken = getLongAccessToken(code);
 
         Connection<Facebook> connection = connectionRepository.findPrimaryConnection(Facebook.class);
         facebook = connection != null ? connection.getApi() : new FacebookTemplate(longAccessToken);
 
-        model.addAttribute("facebookProfile", facebook.userOperations().getUserProfile());
-        PagedList<Post> feed = facebook.feedOperations().getFeed();
-        model.addAttribute("feed", feed);
-        return "home";
+//        model.addAttribute("facebookProfile", facebook.userOperations().getUserProfile());
+//        PagedList<Post> feed = facebook.feedOperations().getFeed();
+//        model.addAttribute("feed", feed);
+        return "redirect:http://localhost:3000/#/facebook-login-redirect/" + longAccessToken;
     }
 
-    private String getLongAccessToken(String accessToken) {
+    private String getLongAccessToken(String code) {
+        String accessToken = "";
         try {
-            String longLiveAccessTokenUrlString = "https://graph.facebook.com/oauth/access_token?"
-                + "grant_type=client_credentials"
+            String longLiveAccessTokenUrlString = "https://graph.facebook.com/v2.3/oauth/access_token?"
                 + "&client_id=" + environment.getProperty("spring.social.facebook.appId")
                 + "&client_secret=" + environment.getProperty("spring.social.facebook.appSecret")
-                + "&code=" + accessToken
-//                + "&redirect_uri=http://localhost:8080/"
+                + "&code=" + code
+                + "&redirect_uri=" + URLEncoder.encode("http://192.168.1.82:8080/secrets/login", "UTF-8")
                 ;
 
             URL longLiveAccessTokenUrl = new URL(longLiveAccessTokenUrlString);
@@ -74,7 +79,13 @@ public class SecretsController {
                 stringBuilder.append(inputLine + "\n");
             }
 
-            accessToken = stringBuilder.toString();
+            String accessTokenObject = stringBuilder.toString();
+
+            JSONObject jsonObject = new JSONObject(accessTokenObject);
+            accessToken = (String) jsonObject.get("access_token");
+
+            logger.info("[getLongAccessToken] Access Token: " + accessToken);
+
             in.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -89,6 +100,9 @@ public class SecretsController {
 
     @RequestMapping(value = "secret-page", method = RequestMethod.GET)
     public @ResponseBody PagedList<GroupMembership> getSecretPages() {
+
+        facebook.restOperations().getForEntity()
+
         return facebook.groupOperations().getMemberships();
     }
 
