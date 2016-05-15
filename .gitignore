@@ -7,7 +7,7 @@ build/
 target/
 work/
 .idea
-application.properties
+application.properties.local
 *.iml
 *.ipr
 *.iws
